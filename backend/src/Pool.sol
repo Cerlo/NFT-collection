@@ -1,9 +1,12 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
+/// @title Pool
+/// @author Remy
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 error CollectIsFunished();
+error CollectIsNotFunished();
 error GoalAlreadyRached();
 error FailtedToSendEther();
 error NoContribution();
@@ -22,7 +25,9 @@ contract Pool is Ownable {
         end = block.timestamp + _duration;
         goal = _goal;
     }
-
+    /**
+        @notice allow to contribute to the pool
+    */
     function contribute() external payable{
         if(block.timestamp >= end){
             revert CollectIsFunished();
@@ -30,7 +35,22 @@ contract Pool is Ownable {
         if(msg.value ==0){
             revert NotEnoughFunds();
         }
-        
+
+        contributions[msg.sender] += msg.value;
+        totalCollected +=msg.value;
+
+        emit Contribute(msg.sender, msg.value);
+    }
+
+    /// @notice Allows the owner to withdraw the gains of the pool
+    function withdraw() external onlyOwner{
+        if(block.timestamp < end || totalCollected < goal){
+            revert CollectIsNotFunished();
+        }
+        (bool sent,) = msg.sender.call{value: address(this).balance}("");
+        if(!sent){
+            revert FailtedToSendEther();
+        }
     }
 
 }
